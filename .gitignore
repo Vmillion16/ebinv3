@@ -1,0 +1,16 @@
+# Backend dependencies
+ebin-backend/node_modules/
+
+# Frontend dependencies
+ebin-frontend/node_modules/
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build folders
+dist/
+build/
