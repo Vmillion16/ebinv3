@@ -1,5 +1,14 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import {
+  FaEye,
+  FaEyeSlash,
+  FaEnvelope,
+  FaLock,
+  FaUser,
+  FaRecycle,
+} from 'react-icons/fa';
+import '../index.css';
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -52,20 +61,18 @@ const Register = () => {
       setError('');
       setSuccess('');
 
-      const response = await axios.post('http://localhost:5000/api/register', {
+      await axios.post('http://localhost:5000/api/register', {
         username: formData.username.trim(),
         email: formData.email.trim(),
         password: formData.password
       });
 
-      console.log('REGISTER SUCCESS:', response.data);
       setSuccess('Registered successfully');
 
       setTimeout(() => {
         window.location.href = '/login';
       }, 1000);
     } catch (err) {
-      console.log('REGISTER ERROR:', err.response?.data || err.message);
       setError(err.response?.data?.error || 'Registration failed');
     } finally {
       setLoading(false);
@@ -73,85 +80,118 @@ const Register = () => {
   };
 
   return (
-    <div className="login-container">
-      <div className="login-card">
-        <h2>E-Bin System</h2>
-        <p>Create an Account</p>
+    <div className="register-page">
+      <div className="bg-circle bg-circle-1"></div>
+      <div className="bg-circle bg-circle-2"></div>
+      <div className="bg-circle bg-circle-3"></div>
 
-        <form onSubmit={handleSubmit}>
+      <div className="register-card">
+        <div className="eco-badge">
+          <FaRecycle />
+        </div>
+
+        <div className="register-header">
+          <h2>E-Bin System</h2>
+          <h3>Create an Account</h3>
+          <span className="register-description">
+            Register to access the waste segregation monitoring system
+          </span>
+        </div>
+
+        <form onSubmit={handleSubmit} className="register-form fade-in-up">
           <div className="form-group">
             <label>Username</label>
-            <input
-              type="text"
-              value={formData.username}
-              onChange={(e) => handleChange('username', e.target.value)}
-              required
-            />
+            <div className="input-wrapper">
+              <FaUser className="input-icon left-icon" />
+              <input
+                type="text"
+                placeholder="Enter your username"
+                value={formData.username}
+                onChange={(e) => handleChange('username', e.target.value)}
+                required
+              />
+            </div>
           </div>
 
           <div className="form-group">
             <label>Email / Gmail</label>
-            <input
-              type="email"
-              value={formData.email}
-              onChange={(e) => handleChange('email', e.target.value)}
-              required
-            />
+            <div className="input-wrapper">
+              <FaEnvelope className="input-icon left-icon" />
+              <input
+                type="email"
+                placeholder="Enter your Gmail"
+                value={formData.email}
+                onChange={(e) => handleChange('email', e.target.value)}
+                required
+              />
+            </div>
           </div>
 
           <div className="form-group">
             <label>Password</label>
-            <div className="password-wrapper">
+            <div className="input-wrapper">
+              <FaLock className="input-icon left-icon" />
               <input
                 type={showPassword ? 'text' : 'password'}
+                placeholder="Enter password"
                 value={formData.password}
                 onChange={(e) => handleChange('password', e.target.value)}
                 required
               />
-              <span
-                className="toggle-password"
+              <button
+                type="button"
+                className="eye-btn"
                 onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
-                {showPassword ? '🙈' : '👁️'}
-              </span>
+                {showPassword ? <FaEyeSlash /> : <FaEye />}
+              </button>
             </div>
           </div>
 
           <div className="form-group">
             <label>Confirm Password</label>
-            <div className="password-wrapper">
+            <div className="input-wrapper">
+              <FaLock className="input-icon left-icon" />
               <input
                 type={showConfirmPassword ? 'text' : 'password'}
+                placeholder="Confirm password"
                 value={formData.confirmPassword}
                 onChange={(e) => handleChange('confirmPassword', e.target.value)}
                 required
               />
-              <span
-                className="toggle-password"
+              <button
+                type="button"
+                className="eye-btn"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
               >
-                {showConfirmPassword ? '🙈' : '👁️'}
-              </span>
+                {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
+              </button>
             </div>
           </div>
 
-          {error && <div className="error">{error}</div>}
-          {success && <div className="success">{success}</div>}
+          {error && <div className="message error">{error}</div>}
+          {success && <div className="message success">{success}</div>}
 
-          <button type="submit" className="login-btn" disabled={loading}>
+          <button type="submit" className="submit-btn" disabled={loading}>
             {loading ? 'Registering...' : 'Register'}
           </button>
         </form>
 
-        <p className="register-text">
-          Already have an account?{' '}
-          <span
-            className="register-link"
-            onClick={() => window.location.href = '/login'}
-          >
-            Login
-          </span>
-        </p>
+        <div className="bottom-links">
+          <p>
+            Already have an account?{' '}
+            <span
+              className="link-text"
+              onClick={() => {
+                window.location.href = '/login';
+              }}
+            >
+              Login
+            </span>
+          </p>
+        </div>
       </div>
     </div>
   );

@@ -1,7 +1,14 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { Eye, EyeOff } from 'lucide-react'; 
+import {
+  FaEye,
+  FaEyeSlash,
+  FaUser,
+  FaLock,
+  FaRecycle,
+} from 'react-icons/fa';
 import './Login.css';
+
 const Login = ({ onLogin }) => {
   const [credentials, setCredentials] = useState({
     username: '',
@@ -15,7 +22,7 @@ const Login = ({ onLogin }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!credentials.username || !credentials.password) {
+    if (!credentials.username.trim() || !credentials.password) {
       setError('All fields are required');
       return;
     }
@@ -24,10 +31,10 @@ const Login = ({ onLogin }) => {
       setLoading(true);
       setError('');
 
-      const response = await axios.post(
-        'http://localhost:5000/api/login',
-        credentials
-      );
+      const response = await axios.post('http://localhost:5000/api/login', {
+        username: credentials.username.trim(),
+        password: credentials.password
+      });
 
       onLogin(response.data.user, response.data.token);
     } catch (err) {
@@ -39,93 +46,107 @@ const Login = ({ onLogin }) => {
   };
 
   return (
-    <div className="login-wrapper">
-      <div className="login-container">
-        <div className="login-card">
-          {/* Header */}
-          <div className="login-header">
-            <div className="logo">
-              
-              <div>
-                <h1 className="login-title">E-Bin System</h1>
-                <p className="login-subtitle">Solar-Powered Waste Management</p>
-              </div>
+    <div className="login-page">
+      <div className="bg-circle bg-circle-1"></div>
+      <div className="bg-circle bg-circle-2"></div>
+      <div className="bg-circle bg-circle-3"></div>
+
+      <div className="login-card">
+        <div className="eco-badge">
+          <FaRecycle />
+        </div>
+
+        <div className="login-header">
+          <h2>E-Bin System</h2>
+          <h3>Welcome Back</h3>
+          <span className="login-description">
+            Sign in to access the solar-powered waste monitoring dashboard
+          </span>
+        </div>
+
+        <form onSubmit={handleSubmit} className="login-form fade-in-up">
+          <div className="form-group">
+            <label>Username</label>
+            <div className="input-wrapper">
+              <FaUser className="input-icon left-icon" />
+              <input
+                type="text"
+                placeholder="Enter your username"
+                value={credentials.username}
+                onChange={(e) =>
+                  setCredentials({ ...credentials, username: e.target.value })
+                }
+                required
+              />
             </div>
           </div>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="login-form">
-            <div className="form-group">
-              <label className="form-label">Username</label>
-              <div className="input-wrapper">
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder="Enter your username"
-                  value={credentials.username}
-                  onChange={(e) =>
-                    setCredentials({ ...credentials, username: e.target.value })
-                  }
-                  required
-                />
-              </div>
+          <div className="form-group">
+            <label>Password</label>
+            <div className="input-wrapper">
+              <FaLock className="input-icon left-icon" />
+              <input
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Enter your password"
+                value={credentials.password}
+                onChange={(e) =>
+                  setCredentials({ ...credentials, password: e.target.value })
+                }
+                required
+              />
+              <button
+                type="button"
+                className="eye-btn"
+                onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <FaEyeSlash /> : <FaEye />}
+              </button>
             </div>
+          </div>
 
-            <div className="form-group">
-              <label className="form-label">Password</label>
-              <div className="input-wrapper password-input-wrapper">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  className="form-input"
-                  placeholder="Enter your password"
-                  value={credentials.password}
-                  onChange={(e) =>
-                    setCredentials({ ...credentials, password: e.target.value })
-                  }
-                  required
-                />
-                <button
-                  type="button"
-                  className="toggle-password-btn"
-                  onClick={() => setShowPassword(!showPassword)}
-                  tabIndex={-1}
-                >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
-              </div>
-            </div>
+          {error && <div className="message error">{error}</div>}
 
-            {error && (
-              <div className="error-message">
-                <span>⚠️</span> {error}
-              </div>
+          <button
+            type="submit"
+            className={`submit-btn ${loading ? 'loading' : ''}`}
+            disabled={loading}
+          >
+            {loading ? (
+              <>
+                <span className="spinner"></span>
+                Signing in...
+              </>
+            ) : (
+              'Sign In'
             )}
+          </button>
+        </form>
 
-            <button 
-              type="submit" 
-              className={`login-button ${loading ? 'loading' : ''}`}
-              disabled={loading}
+        <div className="bottom-links">
+          <p>
+            Don’t have an account?{' '}
+            <span
+              className="link-text"
+              onClick={() => {
+                window.location.href = '/register';
+              }}
             >
-              {loading ? (
-                <>
-                  <div className="spinner"></div>
-                  Signing in...
-                </>
-              ) : (
-                'Sign In'
-              )}
-            </button>
-          </form>
+              Create one
+            </span>
+          </p>
 
-          {/* Footer Links */}
-          <div className="login-footer">
-            <a href="/register" className="auth-link">
-              Don’t have an account? <span>Create one</span>
-            </a>
-            <a href="/forgot-password" className="auth-link">
-              Forgot password? <span>Reset here</span>
-            </a>
-          </div>
+          <p>
+            Forgot password?{' '}
+            <span
+              className="link-text"
+              onClick={() => {
+                window.location.href = '/forgot-password';
+              }}
+            >
+              Reset here
+            </span>
+          </p>
         </div>
       </div>
     </div>

@@ -5,14 +5,47 @@ const bcrypt = require('bcryptjs');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
+const rateLimit = require('express-rate-limit');
 
+// ========================================
+// 1. CREATE APP
+// ========================================
 const app = express();
-app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
-app.use(express.json());
 
-// MongoDB Connection
+// ========================================
+// 2. MIDDLEWARE - BULLETPROOF FOR DEVELOPMENT
+// ========================================
+app.use((req, res, next) => {
+  // KILL ALL PROBLEMATIC HEADERS
+  res.removeHeader('Content-Security-Policy');
+  res.removeHeader('X-Frame-Options');
+  res.removeHeader('X-Content-Type-Options');
+  res.removeHeader('X-XSS-Protection');
+  next();
+});
+
+app.use(cors({
+  origin: true,  // Allow all for dev
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+}));
+
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 1000,
+  message: 'Too many requests'
+});
+app.use('/api/', limiter);
+
+// ========================================
+// 3. DATABASE
+// ========================================
 mongoose.connect(process.env.MONGODB_URI)
-  .then(() => console.log('✅ MongoDB Atlas Connected!'))
+  .then(() => console.log('✅ MongoDB Connected!'))
   .catch(err => {
     console.error('❌ MongoDB Error:', err.message);
     process.exit(1);
@@ -76,7 +109,27 @@ const binSchema = new mongoose.Schema({
 const User = mongoose.model('User', userSchema);
 const Bin = mongoose.model('Bin', binSchema);
 
-// Seed Data
+// ========================================
+// 5. AUTH MIDDLEWARE
+// ========================================
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  
+  if (!token) {
+    return res.status(401).json({ error: 'Access token required' });
+  }
+  
+  jwt.verify(token, SECRET_KEY, (err, user) => {
+    if (err) return res.status(403).json({ error: 'Invalid token' });
+    req.user = user;
+    next();
+  });
+};
+
+// ========================================
+// 6. SEED DATA
+// ========================================
 async function seedData() {
   try {
     const adminCount = await User.countDocuments({ username: 'admin' });
@@ -135,25 +188,11 @@ async function seedData() {
       console.log('✅ 4 sample bins created');
     }
   } catch (error) {
-    console.log('Seed warning (data may exist):', error.message);
+    console.log('Seed warning:', error.message);
   }
 }
 
 // Auth Middleware
-const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-
-  if (!token) {
-    return res.status(401).json({ error: 'Access token required' });
-  }
-
-  jwt.verify(token, SECRET_KEY, (err, user) => {
-    if (err) return res.status(403).json({ error: 'Invalid token' });
-    req.user = user;
-    next();
-  });
-};
 
 // Helper
 const generateOtp = () => {
@@ -415,8 +454,12 @@ app.put('/api/bins/:id/reset', authenticateToken, async (req, res) => {
   }
 });
 
+// ========================================
+// 8. START SERVER
+// ========================================
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 E-Bin Backend: http://localhost:${PORT}`);
+  console.log(`📊 Health: http://localhost:${PORT}/api/health`);
   seedData();
 });

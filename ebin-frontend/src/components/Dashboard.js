@@ -3,7 +3,6 @@ import axios from 'axios';
 import Sidebar from './Sidebar';
 import DashboardOverview from './DashboardOverview';
 import BinMonitoring from './BinMonitoring';
-import Alerts from './Alerts';
 import WasteSegregation from './WasteSegregation';
 import Reports from './Reports';
 import Settings from './Settings';
@@ -115,8 +114,6 @@ const Dashboard = ({ user, onLogout }) => {
           />
         );
 
-      case 'alerts':
-        return <Alerts alerts={[]} onMarkRead={() => {}} />;
 
       case 'segregation':
         return <WasteSegregation bins={bins} />;
