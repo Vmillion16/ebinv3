@@ -13,10 +13,9 @@ const rateLimit = require('express-rate-limit');
 const app = express();
 
 // ========================================
-// 2. MIDDLEWARE - BULLETPROOF FOR DEVELOPMENT
+// 2. MIDDLEWARE
 // ========================================
 app.use((req, res, next) => {
-  // KILL ALL PROBLEMATIC HEADERS
   res.removeHeader('Content-Security-Policy');
   res.removeHeader('X-Frame-Options');
   res.removeHeader('X-Content-Type-Options');
@@ -25,7 +24,7 @@ app.use((req, res, next) => {
 });
 
 app.use(cors({
-  origin: true,  // Allow all for dev
+  origin: true,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
@@ -53,7 +52,9 @@ mongoose.connect(process.env.MONGODB_URI)
 
 const SECRET_KEY = process.env.JWT_SECRET || 'ebin-secret-2026';
 
-// Email transporter
+// ========================================
+// 4. EMAIL TRANSPORTER
+// ========================================
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
@@ -70,7 +71,9 @@ transporter.verify((error, success) => {
   }
 });
 
-// Schemas
+// ========================================
+// 5. SCHEMAS
+// ========================================
 const userSchema = new mongoose.Schema({
   full_name: { type: String, required: true },
   username: { type: String, unique: true, required: true },
@@ -83,7 +86,6 @@ const userSchema = new mongoose.Schema({
     default: 'Utility Staff'
   },
   account_status: { type: String, default: 'Active' },
-
   otp: { type: String, default: null },
   otpExpiry: { type: Date, default: null }
 });
@@ -93,7 +95,7 @@ const binSchema = new mongoose.Schema({
   location: { type: String, required: true },
   bin_type: {
     type: String,
-    enum: ['Recyclable', 'Non-Recyclable', 'General'],
+    enum: ['Biodegradable', 'Non-Biodegradable', 'Recyclable'],
     required: true
   },
   installation_area: String,
@@ -110,29 +112,39 @@ const User = mongoose.model('User', userSchema);
 const Bin = mongoose.model('Bin', binSchema);
 
 // ========================================
-// 5. AUTH MIDDLEWARE
+// 6. AUTH MIDDLEWARE
 // ========================================
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
-  
+
   if (!token) {
     return res.status(401).json({ error: 'Access token required' });
   }
-  
+
   jwt.verify(token, SECRET_KEY, (err, user) => {
-    if (err) return res.status(403).json({ error: 'Invalid token' });
+    if (err) {
+      return res.status(403).json({ error: 'Invalid token' });
+    }
     req.user = user;
     next();
   });
 };
 
 // ========================================
-// 6. SEED DATA
+// 7. HELPER
+// ========================================
+const generateOtp = () => {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+};
+
+// ========================================
+// 8. SEED DATA
 // ========================================
 async function seedData() {
   try {
     const adminCount = await User.countDocuments({ username: 'admin' });
+
     if (adminCount === 0) {
       await User.insertMany([
         {
@@ -150,56 +162,47 @@ async function seedData() {
           role: 'Utility Staff'
         }
       ]);
+
       console.log('✅ Users seeded (admin/staff : password)');
     }
 
     const binCount = await Bin.countDocuments();
+
     if (binCount === 0) {
       await Bin.insertMany([
         {
-          bin_name: 'Bin-A101',
-          location: 'Building A Room 101',
-          bin_type: 'Recyclable',
+          bin_name: 'Bin-1',
+          location: 'Building A',
+          bin_type: 'Biodegradable',
           status: 'Active',
           current_fill_level: 45.5
         },
         {
-          bin_name: 'Bin-Hall1',
-          location: 'Building A Hallway',
-          bin_type: 'Non-Recyclable',
+          bin_name: 'Bin-2',
+          location: 'Building A',
+          bin_type: 'Non-Biodegradable',
           status: 'Full',
           current_fill_level: 92.3
         },
         {
-          bin_name: 'Bin-Caf1',
-          location: 'Building B Cafeteria',
-          bin_type: 'General',
+          bin_name: 'Bin-3',
+          location: 'Building B',
+          bin_type: 'Recyclable',
           status: 'Active',
           current_fill_level: 23.1
-        },
-        {
-          bin_name: 'Bin-Admin',
-          location: 'Administration Office',
-          bin_type: 'Recyclable',
-          status: 'Maintenance',
-          current_fill_level: 78.9
         }
       ]);
-      console.log('✅ 4 sample bins created');
+
+      console.log('✅ 3 sample bins created');
     }
   } catch (error) {
     console.log('Seed warning:', error.message);
   }
 }
 
-// Auth Middleware
-
-// Helper
-const generateOtp = () => {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-};
-
-// Routes
+// ========================================
+// 9. ROUTES
+// ========================================
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'OK',
@@ -208,7 +211,6 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Optional test route
 app.get('/api/test-email', async (req, res) => {
   try {
     await transporter.sendMail({
@@ -269,6 +271,7 @@ app.post('/api/register', async (req, res) => {
 app.post('/api/login', async (req, res) => {
   try {
     const { username, password } = req.body;
+
     const user = await User.findOne({ username });
 
     if (!user || !(await bcrypt.compare(password, user.password))) {
@@ -415,6 +418,7 @@ app.post('/api/reset-password', async (req, res) => {
   }
 });
 
+// DASHBOARD
 app.get('/api/dashboard', authenticateToken, async (req, res) => {
   try {
     const [totalBins, fullBins] = await Promise.all([
@@ -433,6 +437,7 @@ app.get('/api/dashboard', authenticateToken, async (req, res) => {
   }
 });
 
+// GET BINS
 app.get('/api/bins', authenticateToken, async (req, res) => {
   try {
     const bins = await Bin.find().sort({ location: 1 });
@@ -442,12 +447,14 @@ app.get('/api/bins', authenticateToken, async (req, res) => {
   }
 });
 
+// RESET BIN
 app.put('/api/bins/:id/reset', authenticateToken, async (req, res) => {
   try {
     await Bin.findByIdAndUpdate(req.params.id, {
       status: 'Active',
       current_fill_level: 0
     });
+
     res.json({ message: '✅ Bin reset successfully!' });
   } catch (error) {
     res.status(500).json({ error: 'Server error' });
@@ -455,9 +462,10 @@ app.put('/api/bins/:id/reset', authenticateToken, async (req, res) => {
 });
 
 // ========================================
-// 8. START SERVER
+// 10. START SERVER
 // ========================================
 const PORT = process.env.PORT || 5000;
+
 app.listen(PORT, () => {
   console.log(`🚀 E-Bin Backend: http://localhost:${PORT}`);
   console.log(`📊 Health: http://localhost:${PORT}/api/health`);
